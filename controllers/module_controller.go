@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"ngodinginaja-be/config"
 	"ngodinginaja-be/models"
+	"ngodinginaja-be/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -24,40 +25,55 @@ func GetModule(c *gin.Context) {
 }
 
 func CreateModule(c *gin.Context) {
-	var input struct {
-		CourseID    uint   `json:"course_id" binding:"required"`
-		Title       string `json:"title" binding:"required"`
-		Description string `json:"description"`
-		Attachment  string `json:"attachment"`
-		IsLocked    bool   `json:"is_locked"`
-		Order       int    `json:"order"`
-	}
+	var input models.Module
 
-	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	input.Title = c.PostForm("title")
+	input.Description = c.PostForm("description")
+
+	courseID := c.PostForm("course_id")
+	if courseID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "course_id is required"})
 		return
 	}
 
 	
 	var course models.Course
-	if err := config.DB.First(&course, input.CourseID).Error; err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Course not found"})
+	if err := config.DB.First(&course, courseID).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid course_id, course not found"})
 		return
 	}
+	input.CourseID = course.ID
 
-	module := models.Module{
-		CourseID:    input.CourseID,
-		Title:       input.Title,
-		Description: input.Description,
-		Attachment:  input.Attachment,
-		IsLocked:    input.IsLocked,
-		Order:       input.Order,
+	
+	file, fileHeader, err := c.Request.FormFile("attachment")
+	if err == nil {
+		defer file.Close()
+
+		contentType := fileHeader.Header.Get("Content-Type")
+		if contentType != "image/jpeg" &&
+			contentType != "image/png" &&
+			contentType != "application/pdf" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Only JPG, PNG, or PDF allowed"})
+			return
+		}
+
+		url, uploadErr := utils.UploadToCloudinary(file, fileHeader)
+		if uploadErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": uploadErr.Error()})
+			return
+		}
+
+		input.Attachment = url
 	}
 
-	if err := config.DB.Create(&module).Error; err != nil {
+	
+	if err := config.DB.Create(&input).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Module created successfully", "module": module})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Module created successfully",
+		"data":    input,
+	})
 }

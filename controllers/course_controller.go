@@ -1,12 +1,13 @@
-	package controllers
+package controllers
 
-	import (
-		"net/http"
-		"ngodinginaja-be/config"
-		"ngodinginaja-be/models"
+import (
+	"net/http"
+	"ngodinginaja-be/config"
+	"ngodinginaja-be/models"
+	"ngodinginaja-be/utils"
 
-		"github.com/gin-gonic/gin"
-	)
+	"github.com/gin-gonic/gin"
+)
 
 	func GetCourse(c *gin.Context) {
 		var courses []models.Course
@@ -19,26 +20,41 @@
 	}
 
 	func CreateCourse(c *gin.Context) {
-		var input models.Course
-		if err := c.ShouldBindJSON(&input); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var input models.Course
+
+	// Ambil data dari form
+	input.Title = c.PostForm("title")
+	input.Description = c.PostForm("description")
+	input.Language = c.PostForm("language")
+
+	// Upload gambar
+	file, fileHeader, err := c.Request.FormFile("attachment")
+	if err == nil {
+		defer file.Close()
+
+		// Validasi: hanya izinkan image
+		if fileHeader.Header.Get("Content-Type") != "image/jpeg" &&
+			fileHeader.Header.Get("Content-Type") != "image/png" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Only JPG or PNG images allowed"})
 			return
-			
 		}
 
-		course := models.Course{
-			Title: input.Title,
-			Description: input.Description,
-			Language: input.Language,
-
-		}
-
-		if err := config.DB.Create(&course).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		url, uploadErr := utils.UploadToCloudinary(file, fileHeader)
+		if uploadErr != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": uploadErr.Error()})
 			return
 		}
 
-		c.JSON(http.StatusOK, course)
-
-
+		input.Attachment = url
 	}
+
+	if err := config.DB.Create(&input).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Course created successfully",
+		"data":    input,
+	})
+}
