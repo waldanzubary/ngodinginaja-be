@@ -20,12 +20,13 @@ const (
 type Lesson struct {
 	ID              uint      `gorm:"primaryKey;autoIncrement"`
 	ModuleID        uint      `gorm:"not null;index"`
-	Module          Module    `gorm:"foreignKey:ModuleID;constraint:OnDelete:CASCADE"`
+	Module          *Module    `gorm:"foreignKey:ModuleID;references:ID;constraint:OnDelete:CASCADE"`
 	Title           string    `gorm:"type:varchar(255);not null"`
 	Description     string    `gorm:"type:text;not null"`
 	Difficult       Difficult    `gorm:"type:varchar(20);not null"`
 	Input           *string   `gorm:"type:text"`
 	ExpectedOutput  *string   `gorm:"type:text"`
+	Submissions []Submission `gorm:"foreignKey:LessonID;references:ID;constraint:OnDelete:CASCADE"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }

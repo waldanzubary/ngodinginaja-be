@@ -12,12 +12,14 @@ func GetModule(c *gin.Context) {
 	courseID := c.Param("id")
 
 	var modules []models.Module
-	if err := config.DB.Where("course_id = ?", courseID).Find(&modules).Error; err != nil{
+	if err := config.DB.Preload("Lessons").Where("course_id = ?", courseID).Find(&modules).Error; err != nil{
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 		
 	}
 	c.JSON(http.StatusOK, modules)
+
+	
 
 }
 

@@ -11,7 +11,7 @@ type Module struct {
 	Attachment  string    `gorm:"type:varchar(255)"`
 	IsLocked    bool      `gorm:"default:false"`
 	Order       int       `gorm:"default:0"`
-	Lessons     []Lesson  `gorm:"foreignKey:ModuleID;constraint:OnDelete:CASCADE"`
+	Lessons     []Lesson  `gorm:"foreignKey:ModuleID;references:ID;constraint:OnDelete:CASCADE"`
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
