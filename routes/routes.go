@@ -22,11 +22,13 @@ func SetupRoutes(r *gin.Engine) {
 		auth.GET("/course", controllers.GetCourse)
 		auth.GET("/courses/:id/modules", controllers.GetModule)
 		auth.GET("/courses/:id/lessons", controllers.GetLesson)
+		auth.GET("/courses/:id/submissions", controllers.GetSubmission)
 
 
 		auth.POST("/course/create", controllers.CreateCourse)
 		auth.POST("/course/module/create", controllers.CreateModule)
 		auth.POST("/course/lesson/create", controllers.CreateLesson)
+		auth.POST("/course/submission/create", controllers.CreateSubmission)
 
 
 	}
