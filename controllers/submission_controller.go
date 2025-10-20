@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"ngodinginaja-be/config"
 	"ngodinginaja-be/models"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -25,6 +26,81 @@ func GetSubmission(c *gin.Context) {
 	c.HTML(http.StatusOK, "submission.html", gin.H{
 		"title":       "Submissions",
 		"submissions": submissions,
+	})
+}
+
+
+func UpdateSubmission(c *gin.Context) {
+	idParam := c.Param("id")
+
+	
+	id, err := strconv.ParseUint(idParam, 10, 64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid submission ID"})
+		return
+	}
+
+	
+	userValue, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	user := userValue.(models.User)
+
+
+	var existingSubmission models.Submission
+	if err := config.DB.First(&existingSubmission, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Submission not found"})
+		return
+	}
+
+	
+	if existingSubmission.UserID != user.ID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "You are not allowed to edit this submission"})
+		return
+	}
+
+	
+	var input struct {
+		Code   string  `json:"code"`
+		Result *string `json:"result"`
+	}
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	
+	existingSubmission.Code = input.Code
+	existingSubmission.Result = input.Result
+
+	
+	var lesson models.Lesson
+	if err := config.DB.First(&lesson, existingSubmission.LessonID).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Lesson not found"})
+		return
+	}
+
+	
+	existingSubmission.IsCompleted = false
+	inputMatch := lesson.Input != nil && existingSubmission.Code == *lesson.Input
+	resultMatch := lesson.ExpectedOutput != nil && existingSubmission.Result != nil && *existingSubmission.Result == *lesson.ExpectedOutput
+	if inputMatch && resultMatch {
+		existingSubmission.IsCompleted = true
+	}
+
+	if err := config.DB.Save(&existingSubmission).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Response
+	c.JSON(http.StatusOK, gin.H{
+		"success":      true,
+		"message":      "Submission updated successfully",
+		"is_completed": existingSubmission.IsCompleted,
+		"data":         existingSubmission,
 	})
 }
 

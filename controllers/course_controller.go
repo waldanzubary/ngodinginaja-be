@@ -19,20 +19,19 @@ import (
 		c.JSON(http.StatusOK, courses)
 	}
 
-	func CreateCourse(c *gin.Context) {
+func CreateCourse(c *gin.Context) {
 	var input models.Course
 
-	// Ambil data dari form
 	input.Title = c.PostForm("title")
 	input.Description = c.PostForm("description")
 	input.Language = c.PostForm("language")
 
-	// Upload gambar
+
 	file, fileHeader, err := c.Request.FormFile("attachment")
 	if err == nil {
 		defer file.Close()
 
-		// Validasi: hanya izinkan image
+		
 		if fileHeader.Header.Get("Content-Type") != "image/jpeg" &&
 			fileHeader.Header.Get("Content-Type") != "image/png" {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Only JPG or PNG images allowed"})
@@ -58,3 +57,5 @@ import (
 		"data":    input,
 	})
 }
+
+

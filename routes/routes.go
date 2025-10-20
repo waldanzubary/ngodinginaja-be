@@ -31,5 +31,8 @@ func SetupRoutes(r *gin.Engine) {
 		auth.POST("/course/submission/create", controllers.CreateSubmission)
 
 
+		auth.PUT("/course/submission/:id/update", controllers.UpdateSubmission)
+
+
 	}
 }
