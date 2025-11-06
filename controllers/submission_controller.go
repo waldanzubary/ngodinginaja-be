@@ -10,10 +10,10 @@ import (
 )
 
 func GetSubmission(c *gin.Context) {
-	lessonID := c.Param("lesson_id")
+	lessonID := c.Param("id")
 
 	var submissions []models.Submission
-	if err := config.DB.Where("lesson_id = ?", lessonID).Preload("User").Find(&submissions).Error; err != nil {
+	if err := config.DB.Where("lesson_id = ?", lessonID).Find(&submissions).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -23,11 +23,11 @@ func GetSubmission(c *gin.Context) {
 		return
 	}
 
-	c.HTML(http.StatusOK, "submission.html", gin.H{
-		"title":       "Submissions",
-		"submissions": submissions,
-	})
+	c.JSON(http.StatusOK, submissions)
 }
+
+
+
 
 
 func UpdateSubmission(c *gin.Context) {
@@ -95,7 +95,7 @@ func UpdateSubmission(c *gin.Context) {
 		return
 	}
 
-	// Response
+	
 	c.JSON(http.StatusOK, gin.H{
 		"success":      true,
 		"message":      "Submission updated successfully",
@@ -107,10 +107,22 @@ func UpdateSubmission(c *gin.Context) {
 func CreateSubmission(c *gin.Context) {
 	var submission models.Submission
 
+	
 	if err := c.ShouldBindJSON(&submission); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+
+	userValue, exists := c.Get("user")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	
+	user := userValue.(models.User)
+	submission.UserID = user.ID 
 
 	var lesson models.Lesson
 	if err := config.DB.First(&lesson, submission.LessonID).Error; err != nil {
@@ -118,8 +130,10 @@ func CreateSubmission(c *gin.Context) {
 		return
 	}
 
+
 	submission.IsCompleted = false
 
+	
 	inputMatch := lesson.Input != nil && submission.Code == *lesson.Input
 	resultMatch := lesson.ExpectedOutput != nil && submission.Result != nil && *submission.Result == *lesson.ExpectedOutput
 
@@ -127,14 +141,17 @@ func CreateSubmission(c *gin.Context) {
 		submission.IsCompleted = true
 	}
 
+
 	if err := config.DB.Create(&submission).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
+	
 	c.JSON(http.StatusOK, gin.H{
 		"success":      true,
 		"is_completed": submission.IsCompleted,
 		"data":         submission,
 	})
 }
+

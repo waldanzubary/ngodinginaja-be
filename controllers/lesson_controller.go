@@ -25,16 +25,16 @@ func GetLesson(c* gin.Context) {
 
 func CreateLesson(c *gin.Context) {
 	var input struct {
-		ModuleID       uint   `json:"module_id" binding:"required"`
-		Title          string `json:"title" binding:"required"`
-		Description    string `json:"description" binding:"required"`
-		Difficult      string `json:"difficult" binding:"required"`
-		Input          *string `json:"input"`
-		ExpectedOutput *string `json:"expected_output"`
+		ModuleID       uint    `form:"module_id" binding:"required"`
+		Title          string  `form:"title" binding:"required"`
+		Description    string  `form:"description" binding:"required"`
+		Difficult      string  `form:"difficult" binding:"required"`
+		Input          *string `form:"input" binding:"required"`
+		ExpectedOutput *string `form:"expected_output" binding:"required"`
 	}
 
-
-	if err := c.ShouldBindJSON(&input); err != nil {
+	
+	if err := c.ShouldBind(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -46,7 +46,7 @@ func CreateLesson(c *gin.Context) {
 		return
 	}
 
-	
+
 	validDifficulties := map[string]bool{
 		"easy": true, "normal": true, "hard": true, "extreme": true,
 	}
@@ -54,6 +54,7 @@ func CreateLesson(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid difficult level"})
 		return
 	}
+
 
 	lesson := models.Lesson{
 		ModuleID:       input.ModuleID,
